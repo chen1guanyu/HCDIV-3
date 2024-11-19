@@ -81,7 +81,7 @@
                 .data(data)
                 .enter().append("circle")
                 .attr("class", "dot")
-                .attr("r", 5)
+                .attr("r", 1)
                 .attr("cx", d => x(d.month))
                 .attr("cy", d => y(d.resale_price))
                 .style("fill", d => color(d.flat_type))
@@ -98,7 +98,7 @@
                 .on("mouseout", () => {
                     tooltip.style("opacity", 0);
                 })
-                .transition().duration(1000)
+                .transition().duration(10000)
                 .attr("r", 10); // 动画效果：点的放大
         }).catch(error => {
             console.error('Error loading the CSV file:', error);
