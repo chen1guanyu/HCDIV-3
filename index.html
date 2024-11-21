@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tampines Housing Prices Scatter Plot (1/2017-7/2024)</title>
-    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        body{
+        body {
             background-color: antiquewhite;
         }
         .chart {
@@ -54,11 +55,9 @@
 <body>
     <h1 style="text-align: center; font-size: 24px;">Tampines Housing Prices Scatter Plot (1/2017-7/2024)</h1>
     <div style="text-align: center; font-size: 18px;" class="description">
-        This scatter plot visualizes the HDB resale prices (SGD
-) in Tampines, Singapore. 
+        This scatter plot visualizes the HDB resale prices (SGD) in Tampines, Singapore. 
         The dataset includes transaction prices from January and July of each year between 2017 and 2024. 
         The average price curve is displayed when only one flat type is selected.
-    
     </div>
     <div id="filters">
         <label style="background-color: #1f77b4;"><input type="checkbox" value="2 ROOM" checked hidden>2 ROOM</label>
@@ -117,16 +116,12 @@
             svg.append("g")
                 .attr("class", "x-axis")
                 .attr("transform", `translate(0,${height})`)
-                .transition()
-                .duration(1000)
                 .call(xAxis);
 
             // Update y-axis
             svg.selectAll(".y-axis").remove();
             svg.append("g")
                 .attr("class", "y-axis")
-                .transition()
-                .duration(1000)
                 .call(yAxis);
 
             // Update dots
@@ -139,23 +134,15 @@
                 .style("fill", d => color(d.flat_type))
                 .on("mouseover", (event, d) => {
                     tooltip.transition().duration(200).style("opacity", 1);
-                    tooltip.html(`<strong>Month:</strong> ${d3.timeFormat("%Y-%m")(d.month)}<br><strong>Flat Type:</strong> ${d.flat_type}<br><strong>Resale Price:</strong> $${d.resale_price}`)
-                        .style("left", `${event.pageX + 10}px`)
-                        .style("top", `${event.pageY - 28}px`);
+                    tooltip.html(`<strong>Month:</strong> ${d3.timeFormat("%Y-%m")(d.month)}<br><strong>Flat Type:</strong> ${d.flat_type}<br><strong>Resale Price:</strong> $${d.resale_price.toFixed(2)}`);
                 })
                 .on("mousemove", event => {
-                    tooltip.style("left", `${event.pageX + 10}px`)
-                        .style("top", `${event.pageY - 28}px`);
+                    const [xPos, yPos] = d3.pointer(event, svg.node());
+                    tooltip.style("left", `${xPos + 10}px`).style("top", `${yPos - 10}px`);
                 })
-                .on("mouseout", () => tooltip.transition().duration(200).style("opacity", 0))
-                .on("mouseenter", function () {
-                    d3.select(this).transition().duration(200).attr("r", 8);
-                })
-                .on("mouseleave", function () {
-                    d3.select(this).transition().duration(200).attr("r", 2);
-                })
-                .merge(dots)
-                .transition()
+                .on("mouseout", () => tooltip.transition().duration(200).style("opacity", 0));
+
+            dots.transition()
                 .duration(1000)
                 .attr("cx", d => x(d.month))
                 .attr("cy", d => y(d.resale_price));
@@ -165,14 +152,10 @@
             // Draw average line
             svg.selectAll(".average-line").remove();
             if (selectedTypes.length === 1) {
-                const avgData = d3.nest()
-                    .key(d => d3.timeFormat("%Y-%m")(d.month))
-                    .rollup(values => d3.mean(values, v => v.resale_price))
-                    .entries(filteredData)
-                    .map(d => ({
-                        month: d3.timeParse("%Y-%m")(d.key),
-                        avg_price: d.value
-                    }));
+                const avgData = Array.from(d3.group(filteredData, d => d3.timeFormat("%Y-%m")(d.month)), ([key, values]) => ({
+                    month: d3.timeParse("%Y-%m")(key),
+                    avg_price: d3.mean(values, v => v.resale_price)
+                }));
 
                 const line = d3.line()
                     .x(d => x(d.month))
@@ -182,11 +165,7 @@
                 svg.append("path")
                     .datum(avgData)
                     .attr("class", "average-line")
-                    .attr("d", line)
-                    .style("opacity", 0)
-                    .transition()
-                    .duration(1000)
-                    .style("opacity", 1);
+                    .attr("d", line);
             }
         }
 
