@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Singapore East Housing Prices Scatter Plot</title>
-    <script src="https://d3js.org/d3.v5.min.js"></script>       
+    <title>Tampines Housing Prices Scatter Plot (1/2017-7/2024)</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
     <style>
-        /* 设置图表的样式 */
+        body{
+            background-color: antiquewhite;
+        }
         .chart {
             display: block;
             margin: auto;
@@ -18,38 +20,60 @@
             padding: 6px;
             font: 12px sans-serif;
             background: lightsteelblue;
-            border: 0px;
             border-radius: 8px;
             pointer-events: none;
             opacity: 0;
         }
-        /* 添加筛选器样式 */
         #filters {
             text-align: center;
             margin-bottom: 20px;
         }
         #filters label {
             margin-right: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+        }
+        .description {
+            text-align: center;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            margin-bottom: 10px;
+        }
+        .average-line {
+            fill: none;
+            stroke: black;
+            stroke-width: 2;
+            stroke-dasharray: 5, 5;
         }
     </style>
 </head>
 <body>
-    <h1>Singapore East Housing Prices Scatter Plot</h1>
-    <div id="filters">
-        <label><input type="checkbox" value="2 ROOM" checked>2 ROOM</label>
-        <label><input type="checkbox" value="3 ROOM" checked>3 ROOM</label>
-        <label><input type="checkbox" value="4 ROOM" checked>4 ROOM</label>
-        <label><input type="checkbox" value="5 ROOM" checked>5 ROOM</label>
-        <label><input type="checkbox" value="EXECUTIVE" checked>EXECUTIVE</label>
+    <h1 style="text-align: center; font-size: 24px;">Tampines Housing Prices Scatter Plot (1/2017-7/2024)</h1>
+    <div style="text-align: center; font-size: 18px;" class="description">
+        This scatter plot visualizes the HDB resale prices (SGD
+) in Tampines, Singapore. 
+        The dataset includes transaction prices from January and July of each year between 2017 and 2024. 
+        The average price curve is displayed when only one flat type is selected.
+    
     </div>
-    <svg class="chart"></svg>
+    <div id="filters">
+        <label style="background-color: #1f77b4;"><input type="checkbox" value="2 ROOM" checked hidden>2 ROOM</label>
+        <label style="background-color: #ff7f0e;"><input type="checkbox" value="3 ROOM" checked hidden>3 ROOM</label>
+        <label style="background-color: #2ca02c;"><input type="checkbox" value="4 ROOM" checked hidden>4 ROOM</label>
+        <label style="background-color: #d62728;"><input type="checkbox" value="5 ROOM" checked hidden>5 ROOM</label>
+        <label style="background-color: #9467bd;"><input type="checkbox" value="EXECUTIVE" checked hidden>EXECUTIVE</label>
+    </div>
+    <svg class="chart" viewBox="0 0 960 500"></svg>
     <div class="tooltip"></div>
 
     <script>
-        // CSV文件的路径
-        const csvFile = "https://raw.githubusercontent.com/chen1guanyu/HCDIV-3/4420d308324a88a6bd79e8fc7273beebc85de725/Tampines1724resale.csv"; 
+        const csvFile = "https://raw.githubusercontent.com/chen1guanyu/HCDIV-3/4420d308324a88a6bd79e8fc7273beebc85de725/Tampines1724resale.csv";
 
-        const margin = { top: 20, right: 30, bottom: 40, left: 100 },
+        const margin = { top: 20, right: 20, bottom: 40, left: 100 },
               width = 960 - margin.left - margin.right,
               height = 500 - margin.top - margin.bottom;
 
@@ -70,7 +94,7 @@
 
         let data;
 
-        // 加载 CSV 数据
+        // Load data
         d3.csv(csvFile).then(loadedData => {
             data = loadedData.map(d => ({
                 month: d3.timeParse("%Y-%m")(d.month),
@@ -79,60 +103,94 @@
                 flat_type: d.flat_type
             }));
             updateChart();
-        }).catch(error => {
-            console.error('Error loading the CSV file:', error);
-            d3.select("body").append("p").text(`Error loading the CSV file: ${error.message}`);
-        });
+        }).catch(error => console.error('Error loading CSV:', error));
 
         function updateChart() {
-            // 筛选器逻辑
             const selectedTypes = Array.from(document.querySelectorAll('#filters input[type="checkbox"]:checked')).map(cb => cb.value);
             const filteredData = data.filter(d => selectedTypes.includes(d.flat_type));
 
-            // 更新轴域
             x.domain(d3.extent(filteredData, d => d.month));
             y.domain([0, d3.max(filteredData, d => d.resale_price)]);
 
-            // 绘制 x 轴
+            // Update x-axis
             svg.selectAll(".x-axis").remove();
             svg.append("g")
                 .attr("class", "x-axis")
                 .attr("transform", `translate(0,${height})`)
+                .transition()
+                .duration(1000)
                 .call(xAxis);
 
-            // 绘制 y 轴
+            // Update y-axis
             svg.selectAll(".y-axis").remove();
             svg.append("g")
                 .attr("class", "y-axis")
+                .transition()
+                .duration(1000)
                 .call(yAxis);
 
-            // 绘制散点
+            // Update dots
             const dots = svg.selectAll(".dot").data(filteredData, d => `${d.month}-${d.flat_type}`);
-
             dots.enter().append("circle")
                 .attr("class", "dot")
                 .attr("cx", d => x(d.month))
                 .attr("cy", d => y(d.resale_price))
-                .attr("r", 5) // 初始大小
+                .attr("r", 2)
                 .style("fill", d => color(d.flat_type))
                 .on("mouseover", (event, d) => {
-                    tooltip.style("opacity", 1)
-                           .html(`<strong>Month:</strong> ${d3.timeFormat("%Y-%m")(d.month)}<br><strong>Flat Type:</strong> ${d.flat_type}<br><strong>Resale Price:</strong> $${d.resale_price}`)
-                           .style("left", `${event.pageX + 10}px`)
-                           .style("top", `${event.pageY - 28}px`);
+                    tooltip.transition().duration(200).style("opacity", 1);
+                    tooltip.html(`<strong>Month:</strong> ${d3.timeFormat("%Y-%m")(d.month)}<br><strong>Flat Type:</strong> ${d.flat_type}<br><strong>Resale Price:</strong> $${d.resale_price}`)
+                        .style("left", `${event.pageX + 10}px`)
+                        .style("top", `${event.pageY - 28}px`);
                 })
-                .on("mouseout", () => {
-                    tooltip.style("opacity", 0);
-                });
-
-            dots.transition().duration(500)
+                .on("mousemove", event => {
+                    tooltip.style("left", `${event.pageX + 10}px`)
+                        .style("top", `${event.pageY - 28}px`);
+                })
+                .on("mouseout", () => tooltip.transition().duration(200).style("opacity", 0))
+                .on("mouseenter", function () {
+                    d3.select(this).transition().duration(200).attr("r", 8);
+                })
+                .on("mouseleave", function () {
+                    d3.select(this).transition().duration(200).attr("r", 2);
+                })
+                .merge(dots)
+                .transition()
+                .duration(1000)
                 .attr("cx", d => x(d.month))
                 .attr("cy", d => y(d.resale_price));
 
             dots.exit().remove();
+
+            // Draw average line
+            svg.selectAll(".average-line").remove();
+            if (selectedTypes.length === 1) {
+                const avgData = d3.nest()
+                    .key(d => d3.timeFormat("%Y-%m")(d.month))
+                    .rollup(values => d3.mean(values, v => v.resale_price))
+                    .entries(filteredData)
+                    .map(d => ({
+                        month: d3.timeParse("%Y-%m")(d.key),
+                        avg_price: d.value
+                    }));
+
+                const line = d3.line()
+                    .x(d => x(d.month))
+                    .y(d => y(d.avg_price))
+                    .curve(d3.curveMonotoneX);
+
+                svg.append("path")
+                    .datum(avgData)
+                    .attr("class", "average-line")
+                    .attr("d", line)
+                    .style("opacity", 0)
+                    .transition()
+                    .duration(1000)
+                    .style("opacity", 1);
+            }
         }
 
-        // 监听筛选器变化
+        // Filter interaction
         document.querySelectorAll('#filters input[type="checkbox"]').forEach(cb => {
             cb.addEventListener('change', updateChart);
         });
